@@ -13,27 +13,27 @@ namespace tmp {
 template<size_t number, size_t position>
 struct encode_position {
 	static_assert(position < 16u, "Max position is 15!");
-	static size_t constexpr value = 
+	static uint64_t constexpr value = 
 		encode_position<number, position - 1>::value >> 4u;
 };
 template<size_t number>
 struct encode_position<number, 0> {
-	static size_t constexpr value = number << 60u;
+	static uint64_t constexpr value = number << 60u;
 };
 template<size_t number, size_t position>
-size_t constexpr encode_position_v = encode_position<number, position>::value;
+uint64_t constexpr encode_position_v = encode_position<number, position>::value;
 
-template<size_t coding, size_t position>
+template<uint64_t coding, size_t position>
 struct decode_position {
 	static_assert(position < 16u, "Max position is 15!");
 	static size_t constexpr value =
 		decode_position<coding << 4u, position - 1>::value;
 };
-template<size_t coding>
+template<uint64_t coding>
 struct decode_position<coding, 0> {
 	static size_t constexpr value = coding >> 60u;
 };
-template<size_t coding, size_t position>
+template<uint64_t coding, size_t position>
 size_t constexpr decode_position_v = decode_position<coding, position>::value;
 
 
