@@ -18,7 +18,7 @@ inline constexpr size_t get_pow2_len(size_t len) {
 	return get_pow2_len_internal(len - 1u);
 }
 
-namespace tmp {
+namespace data_type_encoding {
 
 // max and min string length by power 2
 constexpr size_t min_str_len_pow2 = 3;
@@ -86,31 +86,31 @@ using decode_scalar_type_t = typename num_scalar_type<
 // scalar data type to encoding
 template<class T> struct encode_scalar_type;
 template<> struct encode_scalar_type<int8_t> {
-	static constexpr size_t value = encode_position_v<0, 0>; };
+	static constexpr uint64_t value = encode_position_v<0, 0>; };
 template<> struct encode_scalar_type<uint8_t> {
-	static constexpr size_t value = encode_position_v<1, 0>; };
+	static constexpr uint64_t value = encode_position_v<1, 0>; };
 template<> struct encode_scalar_type<uint16_t> {
-	static constexpr size_t value = encode_position_v<2, 0>; };
+	static constexpr uint64_t value = encode_position_v<2, 0>; };
 template<> struct encode_scalar_type<uint32_t> {
-	static constexpr size_t value = encode_position_v<3, 0>; };
+	static constexpr uint64_t value = encode_position_v<3, 0>; };
 template<> struct encode_scalar_type<uint64_t> {
-	static constexpr size_t value = encode_position_v<4, 0>; };
+	static constexpr uint64_t value = encode_position_v<4, 0>; };
 template<> struct encode_scalar_type<int16_t> {
-	static constexpr size_t value = encode_position_v<5, 0>; };
+	static constexpr uint64_t value = encode_position_v<5, 0>; };
 template<> struct encode_scalar_type<int32_t> {
-	static constexpr size_t value = encode_position_v<6, 0>; };
+	static constexpr uint64_t value = encode_position_v<6, 0>; };
 template<> struct encode_scalar_type<int64_t> {
-	static constexpr size_t value = encode_position_v<7, 0>; };
+	static constexpr uint64_t value = encode_position_v<7, 0>; };
 template<> struct encode_scalar_type<float> {
-	static constexpr size_t value = encode_position_v<8, 0>; };
+	static constexpr uint64_t value = encode_position_v<8, 0>; };
 template<> struct encode_scalar_type<double> {
-	static constexpr size_t value = encode_position_v<9, 0>; };
+	static constexpr uint64_t value = encode_position_v<9, 0>; };
 template<size_t len> struct encode_scalar_type<FixStr<len>> {
-	static constexpr size_t value = encode_position_v<10, 0> +
+	static constexpr uint64_t value = encode_position_v<10, 0> +
 		encode_position_v<get_pow2_len(len), 2>;
 };
 template<class T>
-constexpr size_t encode_scalar_type_v = encode_scalar_type<T>::value;
+constexpr uint64_t encode_scalar_type_v = encode_scalar_type<T>::value;
 
 // data type struct
 template<class T, size_t... D>
@@ -137,15 +137,30 @@ template<uint64_t coding>
 using decode_data_type_t = typename decode_data_type<coding>::type;
 
 // encode data type
+template<class T> struct encode_data_type;
+template<class T, size_t... D>
+struct encode_data_type<data_type_struct<T, D...>> {
+	static constexpr uint64_t coding_scalar_type = encode_scalar_type_v<T>;
+	static constexpr size_t ndim = sizeof...(D);
+	static constexpr uint64_t coding_ndim = encode_position_v<ndim, 1>;
+	// make coding struct using index sequence
+	template<class T> struct make_coding_struct;
+	template<size_t... I>  // sequence of 0, 1, 2, ..., ndim - 1
+	struct make_coding_struct<std::index_sequence<I...>> {
+		static constexpr uint64_t value =
+			(encode_position_v<D, I + 3> +... +  // dimension size start from 3
+			(coding_scalar_type + coding_ndim));
+	};
+	// assign value
+	static constexpr uint64_t value = 
+		make_coding_struct<std::make_index_sequence<ndim>>::value;
+};
+template<class T>
+constexpr uint64_t encode_data_type_v = encode_data_type<T>::value;
 
-constexpr size_t enha =  
-	encode_position_v<9, 0> + 
-	encode_position_v<3, 1> + 
-	encode_position_v<5, 2> + 
-	encode_position_v<0, 3> + 
-	encode_position_v<2, 4> + 
-	encode_position_v<5, 5>;
+constexpr uint64_t enha = encode_data_type_v<data_type_struct<double, 0, 2, 5>>;
 using Ha = decode_data_type_t<enha>;
 
 static_assert(std::is_same_v<Ha, data_type_struct<double, 0, 2, 5>>);
+static_assert(enha == encode_data_type_v<Ha>);
 }
