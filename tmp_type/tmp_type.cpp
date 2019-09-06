@@ -7,6 +7,9 @@
 int main()
 {
     std::cout << data_type_encoding::enha << "\n";
+	for (auto x : data_type_encoding::xxx) {
+		std::cout << x << "\n";
+	}
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

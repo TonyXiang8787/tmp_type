@@ -157,16 +157,85 @@ struct encode_data_type<data_type_struct<T, D...>> {
 };
 template<class T>
 constexpr uint64_t encode_data_type_v = encode_data_type<T>::value;
+template<class T, size_t... D>
+constexpr uint64_t data_type_code = 
+	encode_data_type_v<data_type_struct<T, D...>>;
+
+// convert single coding to sequence of coding
+// for non string, this is single coding
+// for string, this is a sequence of all possible string length
+// from 2^min_str_len_pow2 to 2^max_str_len_pow2
+template<uint64_t coding>
+struct expand_coding {
+	static constexpr size_t scalar_code = decode_position_v<coding, 0>;
+	static constexpr size_t str_l = decode_position_v<coding, 2>;
+	static_assert(scalar_code != 10u || str_l == 0u);  // FixString must have 0 pow2 length
+	// make coding struct
+	template<class U> struct make_coding_struct;
+	template<size_t... I>  // sequence of 0, 1, 2, ..., max - min + 1
+	struct make_coding_struct<std::index_sequence<I...>> {
+		using type = std::integer_sequence<uint64_t,
+			(coding + encode_position_v<I + min_str_len_pow2, 2>)...>;
+	};
+	// make expansion coding by selection
+	using type = std::conditional_t<
+		scalar_code == 10u,
+		typename make_coding_struct<
+		std::make_index_sequence<max_str_len_pow2 - min_str_len_pow2 + 1>>::type,
+		std::integer_sequence<uint64_t, coding>
+		>;
+};
+
+// concat sequence
+template<class T, class U> struct concat_seq;
+template<uint64_t... I1, uint64_t... I2>
+struct concat_seq<
+	std::integer_sequence<uint64_t, I1...>,
+	std::integer_sequence<uint64_t, I2...>
+> {
+	using type = std::integer_sequence<uint64_t, I1..., I2...>;
+};
 
 // convert raw list of data type
 // containing FixString (0 2pow)
 // FixString to all possible combinations of FixStr<min> to FixStr<max>
+template<class T> struct expand_coding_sequence;
+template<uint64_t coding> 
+struct expand_coding_sequence<
+	std::integer_sequence<uint64_t, coding>> {
+	using type = typename expand_coding<coding>::type;
+};
+template<uint64_t coding, uint64_t... codings>
+struct expand_coding_sequence<
+	std::integer_sequence<uint64_t, coding, codings...>> {
+	using type = typename concat_seq<
+		typename expand_coding<coding>::type,
+		typename expand_coding_sequence<
+			std::integer_sequence<uint64_t, codings...>>::type
+	>::type;
+};
+template<class T>
+using expand_coding_sequence_t = typename expand_coding_sequence<T>::type;
 
 
-constexpr uint64_t enha = encode_data_type_v<data_type_struct<double, 0, 2, 5>>;
-using Ha = decode_data_type_t<enha>;
+constexpr uint64_t enha = encode_data_type_v<data_type_struct<FixString, 0, 2, 5>>;
+//using Ha = decode_data_type_t<enha>;
 
+using Exp = expand_coding_sequence_t<std::integer_sequence<uint64_t,
+	data_type_code<int32_t, 0, 2, 5>,
+	data_type_code<FixString, 0, 2, 5>,
+	data_type_code<double, 0, 2, 5>,
+	data_type_code<float, 0, 2, 5>
+>>;
 
-static_assert(std::is_same_v<Ha, data_type_struct<double, 0, 2, 5>>);
-static_assert(enha == encode_data_type_v<Ha>);
+template<class U> struct xx;
+template<size_t... I>  
+struct xx<std::integer_sequence<uint64_t, I...>> {
+	static constexpr std::array value{ decode_position_v<I, 2>..., };
+};
+
+constexpr auto xxx = xx<Exp>::value;
+
+//static_assert(std::is_same_v<Ha, data_type_struct<double, 0, 2, 5>>);
+//static_assert(enha == encode_data_type_v<Ha>);
 }
