@@ -158,8 +158,14 @@ struct encode_data_type<data_type_struct<T, D...>> {
 template<class T>
 constexpr uint64_t encode_data_type_v = encode_data_type<T>::value;
 
+// convert raw list of data type
+// containing FixString (0 2pow)
+// FixString to all possible combinations of FixStr<min> to FixStr<max>
+
+
 constexpr uint64_t enha = encode_data_type_v<data_type_struct<double, 0, 2, 5>>;
 using Ha = decode_data_type_t<enha>;
+
 
 static_assert(std::is_same_v<Ha, data_type_struct<double, 0, 2, 5>>);
 static_assert(enha == encode_data_type_v<Ha>);

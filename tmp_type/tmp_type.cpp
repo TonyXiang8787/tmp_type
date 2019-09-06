@@ -6,7 +6,7 @@
 
 int main()
 {
-    //std::cout << tmp::a << "\n";
+    std::cout << data_type_encoding::enha << "\n";
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
