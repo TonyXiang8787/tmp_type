@@ -32,32 +32,22 @@ template<size_t l>
 using fix_str_pow2_t = typename fix_str_pow2<l>::type;
 
 // encode one digit to position
+inline constexpr uint64_t encode_position(size_t number, size_t position) {
+	if (position == 0)
+		return number << 60u;
+	return encode_position(number, position - 1) >> 4u;
+}
 template<size_t number, size_t position>
-struct encode_position {
-	static_assert(position < 16u, "Max position is 15!");
-	static constexpr uint64_t value = 
-		encode_position<number, position - 1>::value >> 4u;
-};
-template<size_t number>
-struct encode_position<number, 0> {
-	static constexpr uint64_t value = number << 60u;
-};
-template<size_t number, size_t position>
-constexpr uint64_t encode_position_v = encode_position<number, position>::value;
+constexpr uint64_t encode_position_v = encode_position(number, position);
 
 // decode one digit from position
+inline constexpr size_t decode_position(uint64_t coding, size_t position) {
+	if (position == 0)
+		return coding >> 60u;
+	return decode_position(coding << 4u, position - 1);
+}
 template<uint64_t coding, size_t position>
-struct decode_position {
-	static_assert(position < 16u, "Max position is 15!");
-	static constexpr size_t value =
-		decode_position<coding << 4u, position - 1>::value;
-};
-template<uint64_t coding>
-struct decode_position<coding, 0> {
-	static constexpr size_t value = coding >> 60u;
-};
-template<uint64_t coding, size_t position>
-constexpr size_t decode_position_v = decode_position<coding, position>::value;
+constexpr size_t decode_position_v = decode_position(coding, position);
 
 // get scalar data type
 template<size_t type_code, size_t l = 0> struct num_scalar_type;
@@ -218,8 +208,8 @@ template<class T>
 using expand_coding_sequence_t = typename expand_coding_sequence<T>::type;
 
 
-constexpr uint64_t enha = encode_data_type_v<data_type_struct<FixString, 0, 2, 5>>;
-//using Ha = decode_data_type_t<enha>;
+constexpr uint64_t enha = encode_data_type_v<data_type_struct<double, 0, 2, 5>>;
+using Ha = decode_data_type_t<enha>;
 
 using Exp = expand_coding_sequence_t<std::integer_sequence<uint64_t,
 	data_type_code<int32_t, 0, 2, 5>,
@@ -236,6 +226,6 @@ struct xx<std::integer_sequence<uint64_t, I...>> {
 
 constexpr auto xxx = xx<Exp>::value;
 
-//static_assert(std::is_same_v<Ha, data_type_struct<double, 0, 2, 5>>);
-//static_assert(enha == encode_data_type_v<Ha>);
+static_assert(std::is_same_v<Ha, data_type_struct<double, 0, 2, 5>>);
+static_assert(enha == encode_data_type_v<Ha>);
 }
