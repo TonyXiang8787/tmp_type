@@ -8,10 +8,11 @@
 template<size_t len>
 using FixStr = std::array<char32_t, len>;
 
-size_t constexpr min_str_len_pow = 3;
-size_t constexpr max_str_len_pow = 10;
-
 namespace tmp {
+
+// max and min string length by power 2
+size_t constexpr min_str_len_pow2 = 3;
+size_t constexpr max_str_len_pow2 = 10;
 
 template<size_t number, size_t position>
 struct encode_position {
@@ -39,26 +40,32 @@ struct decode_position<coding, 0> {
 template<uint64_t coding, size_t position>
 size_t constexpr decode_position_v = decode_position<coding, position>::value;
 
-
-template<size_t type_code, size_t l = 0> struct decode_type;
-template<size_t l> struct decode_type<0, l> { using type = int8_t; };
-template<size_t l> struct decode_type<1, l> { using type = uint8_t; };
-template<size_t l> struct decode_type<2, l> { using type = uint16_t; };
-template<size_t l> struct decode_type<3, l> { using type = uint32_t; };
-template<size_t l> struct decode_type<4, l> { using type = uint64_t; };
-template<size_t l> struct decode_type<5, l> { using type = int16_t; };
-template<size_t l> struct decode_type<6, l> { using type = int32_t; };
-template<size_t l> struct decode_type<7, l> { using type = int64_t; };
-template<size_t l> struct decode_type<8, l> { using type = float; };
-template<size_t l> struct decode_type<9, l> { using type = double; };
-template<size_t l> struct decode_type<10, l> { 
-	static_assert(l >= min_str_len_pow);
-	static_assert(l <= max_str_len_pow);
+template<size_t type_code, size_t l = 0> struct number_to_type;
+template<size_t l> struct number_to_type<0, l> { using type = int8_t; };
+template<size_t l> struct number_to_type<1, l> { using type = uint8_t; };
+template<size_t l> struct number_to_type<2, l> { using type = uint16_t; };
+template<size_t l> struct number_to_type<3, l> { using type = uint32_t; };
+template<size_t l> struct number_to_type<4, l> { using type = uint64_t; };
+template<size_t l> struct number_to_type<5, l> { using type = int16_t; };
+template<size_t l> struct number_to_type<6, l> { using type = int32_t; };
+template<size_t l> struct number_to_type<7, l> { using type = int64_t; };
+template<size_t l> struct number_to_type<8, l> { using type = float; };
+template<size_t l> struct number_to_type<9, l> { using type = double; };
+template<size_t l> struct number_to_type<10, l> { 
+	static_assert(l >= min_str_len_pow2);
+	static_assert(l <= max_str_len_pow2);
 	using type = FixStr<1ull << l>; 
 };
 template<size_t type_code, size_t l = 0>
-using decode_type_t = typename decode_type<type_code, l>::type;
+using number_to_type_t = typename number_to_type<type_code, l>::type;
+// retrieve type in one go
+template<uint64_t coding>
+using decode_type_t = number_to_type_t<
+	decode_position_v<coding, 0>,
+	decode_position_v<coding, 2>
+>;
 
-using Ha = decode_type<10, 5>::type;
+using Ha = decode_type_t<encode_position_v<10, 0> + encode_position_v<5, 2>>;
 size_t constexpr a = sizeof(Ha);
+
 }
