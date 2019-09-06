@@ -8,6 +8,9 @@
 template<size_t len>
 using FixStr = std::array<char32_t, len>;
 
+size_t constexpr min_str_len_pow = 3;
+size_t constexpr max_str_len_pow = 10;
+
 namespace tmp {
 
 template<size_t number, size_t position>
@@ -48,7 +51,11 @@ template<size_t l> struct decode_type<6, l> { using type = int32_t; };
 template<size_t l> struct decode_type<7, l> { using type = int64_t; };
 template<size_t l> struct decode_type<8, l> { using type = float; };
 template<size_t l> struct decode_type<9, l> { using type = double; };
-template<size_t l> struct decode_type<10, l> { using type = FixStr<1ull << l>; };
+template<size_t l> struct decode_type<10, l> { 
+	static_assert(l >= min_str_len_pow);
+	static_assert(l <= max_str_len_pow);
+	using type = FixStr<1ull << l>; 
+};
 template<size_t type_code, size_t l = 0>
 using decode_type_t = typename decode_type<type_code, l>::type;
 
