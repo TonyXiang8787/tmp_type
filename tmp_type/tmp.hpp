@@ -123,7 +123,7 @@ struct decode_data_type {
 	static constexpr size_t ndim = decode_position_v<coding, 1>;
 	static_assert(ndim <= 13);
 	// make type struct using index sequence
-	template<class T> struct make_type_struct;
+	template<class U> struct make_type_struct;
 	template<size_t... I>  // sequence of 0, 1, 2, ..., ndim - 1
 	struct make_type_struct<std::index_sequence<I...>> {
 		using type = data_type_struct<scalar_type,
@@ -144,7 +144,7 @@ struct encode_data_type<data_type_struct<T, D...>> {
 	static constexpr size_t ndim = sizeof...(D);
 	static constexpr uint64_t coding_ndim = encode_position_v<ndim, 1>;
 	// make coding struct using index sequence
-	template<class T> struct make_coding_struct;
+	template<class U> struct make_coding_struct;
 	template<size_t... I>  // sequence of 0, 1, 2, ..., ndim - 1
 	struct make_coding_struct<std::index_sequence<I...>> {
 		static constexpr uint64_t value =
