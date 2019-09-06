@@ -7,6 +7,7 @@
 
 template<size_t len>
 using FixStr = std::array<char32_t, len>;
+using FixString = FixStr<1>;
 
 // convert length to rank of 2, pick larger exponetial of 2
 inline constexpr size_t get_pow2_len_internal(size_t len) {
@@ -17,17 +18,11 @@ inline constexpr size_t get_pow2_len(size_t len) {
 	return get_pow2_len_internal(len - 1u);
 }
 
-static_assert(get_pow2_len(5) == 3);
-static_assert(get_pow2_len(4) == 2);
-static_assert(get_pow2_len(7) == 3);
-static_assert(get_pow2_len(8) == 3);
-static_assert(get_pow2_len(9) == 4);
-
 namespace tmp {
 
 // max and min string length by power 2
-size_t constexpr min_str_len_pow2 = 3;
-size_t constexpr max_str_len_pow2 = 10;
+constexpr size_t min_str_len_pow2 = 3;
+constexpr size_t max_str_len_pow2 = 10;
 // encode string using pow2
 template<size_t l>
 struct fix_str_pow2 {
@@ -40,86 +35,117 @@ using fix_str_pow2_t = typename fix_str_pow2<l>::type;
 template<size_t number, size_t position>
 struct encode_position {
 	static_assert(position < 16u, "Max position is 15!");
-	static uint64_t constexpr value = 
+	static constexpr uint64_t value = 
 		encode_position<number, position - 1>::value >> 4u;
 };
 template<size_t number>
 struct encode_position<number, 0> {
-	static uint64_t constexpr value = number << 60u;
+	static constexpr uint64_t value = number << 60u;
 };
 template<size_t number, size_t position>
-uint64_t constexpr encode_position_v = encode_position<number, position>::value;
+constexpr uint64_t encode_position_v = encode_position<number, position>::value;
 
 // decode one digit from position
 template<uint64_t coding, size_t position>
 struct decode_position {
 	static_assert(position < 16u, "Max position is 15!");
-	static size_t constexpr value =
+	static constexpr size_t value =
 		decode_position<coding << 4u, position - 1>::value;
 };
 template<uint64_t coding>
 struct decode_position<coding, 0> {
-	static size_t constexpr value = coding >> 60u;
+	static constexpr size_t value = coding >> 60u;
 };
 template<uint64_t coding, size_t position>
-size_t constexpr decode_position_v = decode_position<coding, position>::value;
+constexpr size_t decode_position_v = decode_position<coding, position>::value;
 
 // get scalar data type
-template<size_t type_code, size_t l = 0> struct number_to_type;
-template<size_t l> struct number_to_type<0, l> { using type = int8_t; };
-template<size_t l> struct number_to_type<1, l> { using type = uint8_t; };
-template<size_t l> struct number_to_type<2, l> { using type = uint16_t; };
-template<size_t l> struct number_to_type<3, l> { using type = uint32_t; };
-template<size_t l> struct number_to_type<4, l> { using type = uint64_t; };
-template<size_t l> struct number_to_type<5, l> { using type = int16_t; };
-template<size_t l> struct number_to_type<6, l> { using type = int32_t; };
-template<size_t l> struct number_to_type<7, l> { using type = int64_t; };
-template<size_t l> struct number_to_type<8, l> { using type = float; };
-template<size_t l> struct number_to_type<9, l> { using type = double; };
-template<size_t l> struct number_to_type<10, l> { 
+template<size_t type_code, size_t l = 0> struct num_scalar_type;
+template<size_t l> struct num_scalar_type<0, l> { using type = int8_t; };
+template<size_t l> struct num_scalar_type<1, l> { using type = uint8_t; };
+template<size_t l> struct num_scalar_type<2, l> { using type = uint16_t; };
+template<size_t l> struct num_scalar_type<3, l> { using type = uint32_t; };
+template<size_t l> struct num_scalar_type<4, l> { using type = uint64_t; };
+template<size_t l> struct num_scalar_type<5, l> { using type = int16_t; };
+template<size_t l> struct num_scalar_type<6, l> { using type = int32_t; };
+template<size_t l> struct num_scalar_type<7, l> { using type = int64_t; };
+template<size_t l> struct num_scalar_type<8, l> { using type = float; };
+template<size_t l> struct num_scalar_type<9, l> { using type = double; };
+template<size_t l> struct num_scalar_type<10, l> { 
 	static_assert(l >= min_str_len_pow2);
 	static_assert(l <= max_str_len_pow2);
 	using type = fix_str_pow2_t<l>;
 };
-template<size_t type_code, size_t l = 0>
-using number_to_type_t = typename number_to_type<type_code, l>::type;
 // retrieve type in one go
 template<uint64_t coding>
-using decode_type_t = number_to_type_t<
+using decode_scalar_type_t = typename num_scalar_type<
 	decode_position_v<coding, 0>,
 	decode_position_v<coding, 2>
->;
+>::type;
 
 // scalar data type to encoding
-template<class T> struct encode_type;
-template<> struct encode_type<int8_t> {
-	static size_t constexpr value = encode_position_v<0, 0>; };
-template<> struct encode_type<uint8_t> {
-	static size_t constexpr value = encode_position_v<1, 0>; };
-template<> struct encode_type<uint16_t> {
-	static size_t constexpr value = encode_position_v<2, 0>; };
-template<> struct encode_type<uint32_t> {
-	static size_t constexpr value = encode_position_v<3, 0>; };
-template<> struct encode_type<uint64_t> {
-	static size_t constexpr value = encode_position_v<4, 0>; };
-template<> struct encode_type<int16_t> {
-	static size_t constexpr value = encode_position_v<5, 0>; };
-template<> struct encode_type<int32_t> {
-	static size_t constexpr value = encode_position_v<6, 0>; };
-template<> struct encode_type<int64_t> {
-	static size_t constexpr value = encode_position_v<7, 0>; };
-template<> struct encode_type<float> {
-	static size_t constexpr value = encode_position_v<8, 0>; };
-template<> struct encode_type<double> {
-	static size_t constexpr value = encode_position_v<9, 0>; };
-template<size_t len> struct encode_type<FixStr<len>> {
-	static size_t constexpr value = encode_position_v<10, 0> +
+template<class T> struct encode_scalar_type;
+template<> struct encode_scalar_type<int8_t> {
+	static constexpr size_t value = encode_position_v<0, 0>; };
+template<> struct encode_scalar_type<uint8_t> {
+	static constexpr size_t value = encode_position_v<1, 0>; };
+template<> struct encode_scalar_type<uint16_t> {
+	static constexpr size_t value = encode_position_v<2, 0>; };
+template<> struct encode_scalar_type<uint32_t> {
+	static constexpr size_t value = encode_position_v<3, 0>; };
+template<> struct encode_scalar_type<uint64_t> {
+	static constexpr size_t value = encode_position_v<4, 0>; };
+template<> struct encode_scalar_type<int16_t> {
+	static constexpr size_t value = encode_position_v<5, 0>; };
+template<> struct encode_scalar_type<int32_t> {
+	static constexpr size_t value = encode_position_v<6, 0>; };
+template<> struct encode_scalar_type<int64_t> {
+	static constexpr size_t value = encode_position_v<7, 0>; };
+template<> struct encode_scalar_type<float> {
+	static constexpr size_t value = encode_position_v<8, 0>; };
+template<> struct encode_scalar_type<double> {
+	static constexpr size_t value = encode_position_v<9, 0>; };
+template<size_t len> struct encode_scalar_type<FixStr<len>> {
+	static constexpr size_t value = encode_position_v<10, 0> +
 		encode_position_v<get_pow2_len(len), 2>;
 };
+template<class T>
+constexpr size_t encode_scalar_type_v = encode_scalar_type<T>::value;
 
-size_t constexpr enha = encode_position_v<10, 0> +encode_position_v<5, 2>;
-using Ha = decode_type_t<enha>;
-size_t constexpr a = sizeof(Ha);
-size_t constexpr enha2 = encode_type<Ha>::value;
-static_assert(enha == enha2);
+// data type struct
+template<class T, size_t... D>
+struct data_type_struct {};
+
+// decode data type
+template<uint64_t coding>
+struct decode_data_type {
+	using scalar_type = decode_scalar_type_t<coding>;  // digit 0 and 2
+	static constexpr size_t ndim = decode_position_v<coding, 1>;
+	static_assert(ndim <= 13);
+	// make type struct using index sequence
+	template<class T> struct make_type_struct;
+	template<size_t... I>  // sequence of 0, 1, 2, ..., ndim - 1
+	struct make_type_struct<std::index_sequence<I...>> {
+		using type = data_type_struct<scalar_type,
+			decode_position_v<coding, I + 3>...>;   // dimension size start from 3
+	};
+	// assign type to index sequence
+	using type = typename make_type_struct<
+		std::make_index_sequence<ndim>>::type;
+};
+template<uint64_t coding>
+using decode_data_type_t = typename decode_data_type<coding>::type;
+
+// encode data type
+
+constexpr size_t enha =  
+	encode_position_v<9, 0> + 
+	encode_position_v<3, 1> + 
+	encode_position_v<5, 2> + 
+	encode_position_v<0, 3> + 
+	encode_position_v<2, 4> + 
+	encode_position_v<5, 5>;
+using Ha = decode_data_type_t<enha>;
+
+static_assert(std::is_same_v<Ha, data_type_struct<double, 0, 2, 5>>);
 }
