@@ -8,6 +8,21 @@
 template<size_t len>
 using FixStr = std::array<char32_t, len>;
 
+// convert length to rank of 2, pick larger exponetial of 2
+inline constexpr size_t get_pow2_len_internal(size_t len) {
+	if (len == 0) return 0u;
+	return get_pow2_len_internal(len / 2) + 1u;
+}
+inline constexpr size_t get_pow2_len(size_t len) {
+	return get_pow2_len_internal(len - 1u);
+}
+
+static_assert(get_pow2_len(5) == 3);
+static_assert(get_pow2_len(4) == 2);
+static_assert(get_pow2_len(7) == 3);
+static_assert(get_pow2_len(8) == 3);
+static_assert(get_pow2_len(9) == 4);
+
 namespace tmp {
 
 // max and min string length by power 2
@@ -97,9 +112,14 @@ template<> struct encode_type<float> {
 	static size_t constexpr value = encode_position_v<8, 0>; };
 template<> struct encode_type<double> {
 	static size_t constexpr value = encode_position_v<9, 0>; };
+template<size_t len> struct encode_type<FixStr<len>> {
+	static size_t constexpr value = encode_position_v<10, 0> +
+		encode_position_v<get_pow2_len(len), 2>;
+};
 
-
-using Ha = decode_type_t<encode_position_v<10, 0> + encode_position_v<5, 2>>;
+size_t constexpr enha = encode_position_v<10, 0> +encode_position_v<5, 2>;
+using Ha = decode_type_t<enha>;
 size_t constexpr a = sizeof(Ha);
-
+size_t constexpr enha2 = encode_type<Ha>::value;
+static_assert(enha == enha2);
 }
